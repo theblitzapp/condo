@@ -82,6 +82,17 @@ defmodule Condo.Repo do
     Keyword.put_new(opts, :prefix, Condo.prefix(tenant))
   end
 
-  @spec repo(Condo.tenant()) :: module()
-  def repo(tenant), do: Application.fetch_env!(:condo, :repo_mapper).(tenant)
+  case Application.fetch_env!(:condo, :repo_mapper) do
+    {mod, fun} ->
+      def repo(tenant) do
+        apply(unquote(mod), unquote(fun), [tenant])
+      end
+
+    mod when is_atom(mod) ->
+      def repo(_) do
+        unquote(mod)
+      end
+
+    _ -> raise "`repo_mapper` config must be a module or a tuple of `{module, fun}`"
+  end
 end
